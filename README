@@ -1,0 +1,10 @@
+EXPORT LAYER TO FILE - A Gimp Plug-in to export the layers to files. 
+	The layers can be selected irrespective of the layer groups and the layer type. Currently only PNG, JPEG and BMP images can be exported. But the formats can be easily added by modifying the 'format_set[][]'. Text layers, patterns, Layers with filters can also be exported using this plug-in. 
+
+TODO: 
+	Modify the select layers dialog to automatically resize depending on the number of layers and the name of the layer. 
+
+TO INSTALL:
+	gimptool-2.0 --build export-layers-to-file.c
+	gimptool-2.0 --install-bin export-layers-to-file
+

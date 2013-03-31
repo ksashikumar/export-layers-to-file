@@ -1,3 +1,20 @@
+/* Export Layers To File Plug-in for Gimp 
+ * Copyright (C) 2013 Sashi Kumar <ksashikumark93@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "config.h"
 
 #include <string.h>
@@ -47,8 +64,7 @@ static GtkWidget     *export = NULL;
 static const gchar   *format = NULL;
 static const gchar   *raw_filename = NULL;
 
-static const gchar   *format_set[] = 
-{
+static const gchar   *format_set[] = {
    "png", "jpg", "bmp" 
 };
 static gint           format_count = 3;
@@ -62,7 +78,6 @@ static   void      run                 (const gchar      *name,
 	  	                        gint             *nreturn_vals,
 	  	                        GimpParam       **return_vals);
 static   gboolean  export_dialog       (GimpDrawable     *drawable); 
-static   void      main_init           (void);
 static   void      cb_select_layers    (GtkWidget        *widget,
                                         gpointer          layers_button);
 static   void      cb_layers           (GtkWidget        *widget, 
@@ -75,15 +90,16 @@ static   void      cb_browse           (GtkWidget        *widget,
                                         gpointer          window);
 static   void      cb_filepath         (GtkWidget        *widget,
                                         gpointer          data);
-static   gboolean  final_check         (void);
+static   void      main_init           (void);
 static   void      final_export        (void);
 static   void      export_button_check (void);
 static   void      create_combo_list   (void);
 static   void      select_all_layers   (void);
 static   void      deselect_all_layers (void);
 static   void      init_layers         (void);
-static   gboolean  check_sensitive     (void);
 static   void      destroy_all         (void);
+static   gboolean  check_sensitive     (void);
+static   gboolean  final_check         (void);
 
 
 const GimpPlugInInfo PLUG_IN_INFO =
@@ -93,7 +109,6 @@ const GimpPlugInInfo PLUG_IN_INFO =
   query, /* query_proc */
   run    /* run_proc   */
 };
-
 
 MAIN ()
 
@@ -264,20 +279,20 @@ main_init (void)
   root_layer =  gimp_image_get_layers (image_ID, &nroot_layer);
 
   for (i = 0; i < nroot_layer; i++)
-  {
-    if (gimp_item_is_group (root_layer[i]))
     {
-      children = gimp_item_get_children (root_layer[i], &num_children);
-      nlayers =  nlayers + num_children;
-      for (j = 0; j < num_children; j++)
-        layers[num++] = children[j];
-    }
-    else
-    {
-      nlayers = nlayers + 1;
-      layers[num++] = root_layer[i];
-    }
-  }   
+      if (gimp_item_is_group (root_layer[i]))
+        {
+          children = gimp_item_get_children (root_layer[i], &num_children);
+          nlayers =  nlayers + num_children;
+          for (j = 0; j < num_children; j++)
+            layers[num++] = children[j];
+        }
+      else
+        {
+          nlayers = nlayers + 1;
+          layers[num++] = root_layer[i];
+        }
+    }   
   init_layers ();
 }
 
@@ -287,8 +302,10 @@ cb_select_layers (GtkWidget *Widget,
 {
   gint i;
   GtkWidget *window;
-  GtkWidget *hbox, *vbox;
+  GtkWidget *table;
   GtkWidget *frame;
+  GtkWidget *scrolled_window;
+  GtkWidget *hbox;
 
   window = gtk_dialog_new_with_buttons ("Select Layers", 
                                         GTK_WINDOW (dialog),
@@ -299,32 +316,48 @@ cb_select_layers (GtkWidget *Widget,
                                   "Done",
                                   GTK_RESPONSE_OK); 
   gtk_widget_set_sensitive (button, check_sensitive ()); 
+  gtk_widget_set_size_request (window, 225, 350);
 
-  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
-  gtk_container_set_border_width (GTK_CONTAINER (vbox), 12);
-  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (window))), vbox,
-                      FALSE, FALSE, 0);
-  
+  scrolled_window = gtk_scrolled_window_new (NULL, NULL);
+  gtk_container_set_border_width (GTK_CONTAINER (scrolled_window), 5);
+  gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (scrolled_window),
+                                  GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
+
+  gtk_box_pack_start (GTK_BOX ((gtk_dialog_get_content_area(GTK_DIALOG(window)))),       
+                      scrolled_window, TRUE, TRUE, 0);
+
+  table = gtk_table_new (nlayers, 2, FALSE);
+  gtk_table_set_row_spacings (GTK_TABLE (table), 1);
+  gtk_table_set_col_spacings (GTK_TABLE (table), 1);
+  gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (scrolled_window), table);
+
   for (i = 0; i < nlayers; i++)
-  {
-    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
-    gtk_box_pack_start (GTK_BOX (vbox), hbox, TRUE, TRUE, 0);
+    {    
+      hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5); 
+      gtk_table_attach (GTK_TABLE (table), hbox,
+	                0, 1, i, i+1,
+                        GTK_FILL, GTK_FILL,
+                        15, 15);
 
-    frame = gtk_frame_new(NULL);
-    gtk_frame_set_shadow_type(GTK_FRAME(frame),GTK_SHADOW_ETCHED_IN);
-    gtk_box_pack_start (GTK_BOX(hbox), frame, FALSE, FALSE,0);
+      frame = gtk_frame_new(NULL);
+      gtk_frame_set_shadow_type(GTK_FRAME(frame),GTK_SHADOW_ETCHED_IN);
+      gtk_box_pack_start (GTK_BOX(hbox), frame, FALSE, FALSE,0);
+  
+      layer_set[i].thumbnail = gtk_image_new();
+      gtk_image_set_from_pixbuf (GTK_IMAGE (layer_set[i].thumbnail), 
+                                gimp_drawable_get_thumbnail(layer_set[i].drawable_id,
+                                40,40,
+                                GIMP_PIXBUF_SMALL_CHECKS) );
+      gtk_container_add (GTK_CONTAINER (frame), layer_set[i].thumbnail);
     
-    layer_set[i].thumbnail = gtk_image_new();
-    gtk_image_set_from_pixbuf(GTK_IMAGE (layer_set[i].thumbnail), gimp_drawable_get_thumbnail(layer_set[i].drawable_id,32,32,GIMP_PIXBUF_SMALL_CHECKS) );
-    gtk_container_add (GTK_CONTAINER (frame), layer_set[i].thumbnail);
-    
-    layer_set[i].checkbox = gtk_check_button_new_with_label(layer_set[i].layer_name);
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(layer_set[i].checkbox), layer_set[i].select);
+      layer_set[i].checkbox = gtk_check_button_new_with_label(layer_set[i].layer_name);
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(layer_set[i].checkbox), layer_set[i].select);
 
-    gtk_box_pack_start (GTK_BOX (hbox), layer_set[i].checkbox, FALSE, FALSE, 0);
-    g_signal_connect(layer_set[i].checkbox, "clicked", 
+      gtk_table_attach_defaults (GTK_TABLE (table), layer_set[i].checkbox,
+                                 1, 2, i, i+1);
+      g_signal_connect(layer_set[i].checkbox, "clicked", 
                        G_CALLBACK (cb_select), (gpointer) i);
-  }
+    }
   
   gtk_widget_show_all (window);
   
