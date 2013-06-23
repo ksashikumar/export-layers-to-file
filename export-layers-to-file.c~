@@ -273,8 +273,9 @@ main_init (void)
  
   layers = g_new0 (gint32, 50);
   root_layer =  gimp_image_get_layers (image_ID, &nroot_layer);
-  /* FIXME: The following code does not perform a UTF-8 substring
-     search. */
+
+  /* FIXME: The following code does not identifies recursive layer groups. */
+
   for (i = 0; i < nroot_layer; i++)
     {
       if (gimp_item_is_group (root_layer[i]))
