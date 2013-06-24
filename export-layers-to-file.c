@@ -54,6 +54,7 @@ static GimpDrawable  *main_drawable = NULL;
 static gint32         image_ID;
 static gchar         *image_name = NULL;
 static gint           nlayers;
+static gint           num;
 static gint32        *layers = NULL;
 static GtkWidget     *dialog = NULL;
 static GtkWidget     *button = NULL;
@@ -61,7 +62,6 @@ static GtkWidget     *combo = NULL;
 static GtkWidget     *export = NULL;
 static const gchar   *format = NULL;
 static const gchar   *raw_filename = NULL;
-
 static const gchar   *format_set[] = {
    "png", "jpg", "bmp" 
 };
@@ -89,6 +89,7 @@ static   void      cb_browse           (GtkWidget        *widget,
 static   void      cb_filepath         (GtkWidget        *widget,
                                         gpointer          data);
 static   void      main_init           (void);
+static   void      rec_layer_group     (gint32           *layer);
 static   void      final_export        (void);
 static   void      export_button_check (void);
 static   void      create_combo_list   (void);
@@ -260,38 +261,46 @@ export_dialog (GimpDrawable *drawable)
 static void 
 main_init (void)
 {
-  gint32 *children, *root_layer;
-  gint i, j;
-  gint num_children, nroot_layer;
-  gint num = 0;
-
+  gint32 *root_layer;
+  gint i;
+  gint nroot_layer;
   export_set.format_select = FALSE;
   export_set.uri_select = FALSE;
   export_set.layers_select = FALSE;
-  
   nlayers = 0;
+  num = 0;
  
   layers = g_new0 (gint32, 50);
   root_layer =  gimp_image_get_layers (image_ID, &nroot_layer);
 
-  /* FIXME: The following code does not identifies recursive layer groups. */
-
   for (i = 0; i < nroot_layer; i++)
     {
-      if (gimp_item_is_group (root_layer[i]))
-        {
-          children = gimp_item_get_children (root_layer[i], &num_children);
-          nlayers =  nlayers + num_children;
-          for (j = 0; j < num_children; j++)
-            layers[num++] = children[j];
-        }
-      else
-        {
-          nlayers = nlayers + 1;
-          layers[num++] = root_layer[i];
-        }
+      rec_layer_group (&root_layer[i]);
     }   
   init_layers ();
+}
+
+
+
+static void 
+rec_layer_group (gint32 *layer)
+{
+  gint32 *children;
+  gint num_children, j;
+    
+  if (gimp_item_is_group (*layer))
+    {
+      children = gimp_item_get_children (*layer, &num_children);
+
+      for (j = 0; j < num_children; j++)
+        rec_layer_group (&children[j]);
+    }
+  else
+    {
+      nlayers = nlayers + 1;
+      layers[num++] = *layer;
+    }
+
 }
 
 static void
