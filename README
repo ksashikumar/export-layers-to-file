@@ -8,8 +8,5 @@ TO INSTALL:
 	gimptool-2.0 --build export-layers-to-file.c
 	gimptool-2.0 --install-bin export-layers-to-file
 
-EXECUTABLE:
-	Place the executable in /home/<user>/.gimp-2.x/plug-ins
-
 PLUGIN REGISTRY:
 	http://registry.gimp.org/node/28015
